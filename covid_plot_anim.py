@@ -49,7 +49,7 @@ def human_format(num, _p):
 # All countries are ASCII strings
 # Asks for input from the user for a country and tries to look it up
 # Loops until we get one, CTRL-C exits
-def askcountry(countryset, entry):
+def askcountry(countryset, origdict, entry):
     prompt = "Enter a country [e.g. Mainland China, US is US]: "
     ctr = 0
     g = ""
@@ -62,8 +62,7 @@ def askcountry(countryset, entry):
         g = str(input())
         ctr = ctr +1
     print(g + " has been chosen as {}, moving on".format(entry))
-    return g
-
+    return origdict[g.lower()]
 
 def dateconv(date_str):
     """
@@ -90,10 +89,13 @@ np_data = np.recfromcsv('covid_19_data_hinted_accurate.csv', delimiter=',', dtyp
 
 # Set comprehension
 countries = {s[country].lower() for s in np_data}
+ctrs      = dict([(s.lower(), s) for s in {s[country] for s in np_data} ])
+
+# print(ctrs)
 
 # print(askcountry(countries))
 
-print("US" in countries)
+# print("US" in countries)
 
 
 # Merge occurences based on the date as the may have
@@ -159,8 +161,8 @@ def mergedata(data):
 # Use set of all countries too!
 
 STAGE("REGIONS", "Input a valid country\n\t **NB**: \n\t => China is Mainland China,\n\t => Multiple words should capitalize each Word! e.g Mainland China \n\t => Some countries are available as initials e.g US, UK...(Must all be capital!)")
-region  = askcountry(countries, "Region 1")
-region2 = askcountry(countries, "Region 2")
+region  = askcountry(countries, ctrs, "Region 1")
+region2 = askcountry(countries, ctrs, "Region 2")
 SUBSTAGE("Picked", "{} and {}".format(region, region2))
 
 # newdata = mergedata(np_data)
