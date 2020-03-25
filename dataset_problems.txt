@@ -1,0 +1,7 @@
+ - Mixed date formatting (year section)
+	SOLVE - Found a cleaned dataset!
+ - Weird separator for state names!! e.g - Chicago,IL - causes parsing issues 
+	SOLVE - https://stackoverflow.com/questions/23353585/got-1-columns-instead-of-error-in-numpy
+	instances of , replaced with - to avoid mixing
+ - Missing values!!
+    SOLVE - https://numpy.org/devdocs/user/basics.io.genfromtxt.html#missing-values
