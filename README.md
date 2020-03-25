@@ -3,6 +3,7 @@
 ### SARS-COV-2 Comparison tool
 
 ![plotex](./index.gif)
+![plotex2](./index-2.gif)
 
 This is a tool I made in python requiring only **matplotlib** and **numpy** to plot an animation of SARS-COV-2 statistics based on
 [This dataset](https://www.kaggle.com/sudalairajkumar/novel-corona-virus-2019-dataset/data#covid_19_data.csv)
@@ -24,6 +25,10 @@ then simply run
 python3 covid_19_anim.py
 ```
 It will prompt for input, follow instructions notes as indicated and the plot should show
+
+# Saving animation
+
+to save the animation locally, simply uncomment lines 496, 497 and 500. You may need to have FFmpeg to achieve this
 
 # Blog Post
 Coming soon
