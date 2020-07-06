@@ -79,15 +79,19 @@ STAGE("CSV-Read", "importing data")
 # indexes for easy indexing
 # Also how i expect the data to be later on!
 country, date, confirmed, deaths, recovered = 1,0,2,3,4
+# country, date, confirmed, deaths, recovered = 3,1,5,6,7
 
-np_data = np.recfromcsv('covid_19_data_hinted_accurate.csv', delimiter=',', dtype=None, encoding="utf8",  names=True,
+# np_data = np.recfromcsv('covid_19_data_hinted_accurate.csv', delimiter=',', dtype=None, encoding="utf8",  names=True,
+np_data = np.recfromcsv('covid_19_data.csv', delimiter=',', dtype=None, encoding="utf8",  names=True,
         converters={1: dateconv, 5: float, 6: int, 7: int},
         usecols = (1,3,5,6,7),
         # missing_values={0: '???'},
         # filling_values={0: 'Unknown'}
     )   #
 
+
 # Set comprehension
+print(np_data[1])
 countries = {s[country].lower() for s in np_data}
 ctrs      = dict([(s.lower(), s) for s in {s[country] for s in np_data} ])
 
@@ -182,8 +186,8 @@ mergedcases_b = mergedata(cases_b)
 
 STAGE("MERGE", "Finished!")
 print()
-print(mergedcases[1])
-print(mergedcases_b[1])
+print(len(mergedcases))
+print(len(mergedcases_b))
 print()
 # tconf = [case[confirmed] for case in merged]
 # print(tconf)

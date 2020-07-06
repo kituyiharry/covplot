@@ -6,6 +6,7 @@
 import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.ticker as ticker
+import pprint
 
 # import pandas as pd # Using numpy would require a lot of work!! ;)
 
@@ -28,6 +29,7 @@ days = mdates.DayLocator()      # every day
 months = mdates.MonthLocator()  # every month
 s_fmt = mdates.DateFormatter('%b-%Y')
 
+should_logscale = False
 
 # Printf debugging
 def STAGE(stage, desc):
@@ -69,7 +71,7 @@ def dateconv(date_str):
     :returns: a date instance
     """
     # print("Cnv: ", date_str)
-    return np.datetime64(datetime.strptime(date_str, '%m/%d/%y')) #ref: https://docs.python.org/3/library/datetime.html#strftime-and-strptime-behavior
+    return np.datetime64(datetime.strptime(date_str, '%m/%d/%Y')) #ref: https://docs.python.org/3/library/datetime.html#strftime-and-strptime-behavior
 
 
 STAGE("CSV-Read", "importing data")
@@ -78,16 +80,19 @@ STAGE("CSV-Read", "importing data")
 # np_data = np.recfromcsv('covid_19_clean_complete_with_hints.csv', delimiter=',', dtype=None, encoding="utf8",  names=True,
 # indexes for easy indexing
 # Also how i expect the data to be later on!
-country, date, confirmed, deaths =  0,1,2,3 #,4
+# country, date, confirmed, deaths =  0,1,2,3 #,4
+country, date, confirmed, deaths, recovered = 1,0,2,3,4
 
 np_data = np.recfromcsv('covid_19_data.csv', delimiter=',', dtype=None, encoding="utf8",  names=True,
-        converters={4: dateconv},
-        usecols = (1,4,5,6),
-        # usecols = (1,3,5,6,7),
+        # converters={4: dateconv},
+        converters={1: dateconv, 5: float, 6: int, 7: int},
+        # usecols = (1,4,5,6),
+        usecols = (1,3,5,6,7),
         # missing_values={0: '???'},
         # filling_values={0: 'Unknown'}
     )   #
 
+print(np_data)
 # Set comprehension
 countries = {s[country].lower() for s in np_data}
 ctrs      = dict([(s.lower(), s) for s in {s[country] for s in np_data} ])
@@ -113,35 +118,35 @@ def mergedata(data):
     # SUBSTAGE("First data => ", data[0][0], " at: ", data[0][1])
     # SUBSTAGE("Last data => ", data[len(data)-1][0], " at: ", data[len(data)-1][1])
     while counter < len(data):
-        ctr,mdate,c,d = data[counter][country], data[counter][date], data[counter][confirmed],data[counter][deaths] #,data[counter][recovered]
+        ctr,mdate,c,d,r = data[counter][country], data[counter][date], data[counter][confirmed],data[counter][deaths],data[counter][recovered]
         if counter == 0:
             # _,_,c,d,r = data[counter]
-            # SUBSTAGE("Starting merger", "Accumulating values!! date already set => {}".format((c,d,r)))
+            SUBSTAGE("Starting merger", "Accumulating values!! date already set => {}".format((c,d)))
             conf_accuml += c
             dth_accuml  += d
-            # rec_accuml  += r
+            rec_accuml  += r
         elif mdate > prev_date :
-            # SUBSTAGE("Mult-entry found", "Entry at =>  {}".format(counter))
+            SUBSTAGE("Mult-entry found", "Entry at =>  {}".format(counter))
             prevctr = data[(counter-1)][country]
             # print("Comparing dates!! => ", prev_date , " < ", mdate)
             # print("Appending for: => ", prevctr, "At: ", counter, " Currently: => ", len(ncases))
             # NB: Also swap these if the formatting changes!!
             ncases.append([
-                prevctr, 
                 prev_date,
+                prevctr,
                 conf_accuml,
                 dth_accuml,
-                # rec_accuml,
+                rec_accuml,
             ])
             conf_accuml = c
             dth_accuml  = d
-            # rec_accuml  = r
+            rec_accuml  = r
             prev_date   = mdate
         else:
             # print("Accumulating values!!", )
             conf_accuml += c
             dth_accuml  += d
-            # rec_accuml  += r
+            rec_accuml  += r
         counter = counter+1
     SUBSTAGE("Finished", "Final shape => {}".format(len(ncases)))
     return ncases
@@ -183,8 +188,8 @@ mergedcases_b = mergedata(cases_b)
 
 STAGE("MERGE", "Finished!")
 print()
-print(mergedcases[1])
-print(mergedcases_b[1])
+pprint.pprint(mergedcases[:-5])
+pprint.pprint(mergedcases_b[:-5])
 print()
 # tconf = [case[confirmed] for case in merged]
 # print(tconf)
@@ -213,12 +218,12 @@ STAGE("COMPUTE", "Deriving new data")
 SUBSTAGE("CASES", "cumulative cases in {}".format(region))
 cumulative_conf = np.cumsum([case[confirmed] for case in mergedcases])
 cumulative_dth  = np.cumsum([case[deaths] for case in mergedcases])
-# cumulative_rec  = np.cumsum([case[recovered] for case in mergedcases])
+cumulative_rec  = np.cumsum([case[recovered] for case in mergedcases])
 
 SUBSTAGE("CASES", "cumulative cases in {}".format(region2))
 cumulconf_b = np.cumsum([case[confirmed] for case in mergedcases_b])
 cumuldth_b  = np.cumsum([case[deaths] for case in mergedcases_b])
-# cumulrec_b  = np.cumsum([case[recovered] for case in mergedcases_b])
+cumulrec_b  = np.cumsum([case[recovered] for case in mergedcases_b])
 
 # print(cumulconf_b[len(cumulconf_b)-10:len(cumulconf_b)])
 # growth_a_vals = np.array(list(map(comp_growth, zip(range(len(cumulative_conf)), cumulative_conf))))
@@ -253,12 +258,12 @@ growth_a = []
 growth_b = []
 intbuffer  = []
 dthbuffer  = []
-# recbuffer  = []
+recbuffer  = []
 datebuffer = []
 
 int2buffer  = []
 dth2buffer  = []
-# rec2buffer  = []
+rec2buffer  = []
 date2buffer = []
 
 
@@ -308,13 +313,14 @@ ax.set_xlim(dates[0], dates[len(dates)-1] + np.timedelta64(2,'D') )
 ax.set_ylim(0, y_lim+int(y_lim * 0.25))
 line,  = ax.plot(datebuffer, intbuffer, 'b.', label='confirmed')
 line2, = ax.plot(datebuffer, dthbuffer, 'r-', label='deaths')
-# line3, = ax.plot(datebuffer, recbuffer, 'g-', label='recovered')
+line3, = ax.plot(datebuffer, recbuffer, 'g-', label='recovered')
 
 ax.grid(True)
 
 #Setup legends
 #
-ax.legend([line, line2 ], [line.get_label(), line2.get_label()])
+ax.legend([line, line2, line3 ], [line.get_label(), line2.get_label(),
+    line3.get_label()])
 
 # print(dir(line))
 
@@ -337,13 +343,14 @@ ax2.set_xlim(dates_b[0], dates_b[len(dates_b)-1] + np.timedelta64(3,'D') )
 ax2.set_ylim(0, y_lim_b+int(y_lim_b * 0.125))
 line4, = ax2.plot(date2buffer, int2buffer, 'b.', label='confirmed')
 line5, = ax2.plot(date2buffer, dth2buffer, 'r-', label='deaths')
-# line6, = ax2.plot(date2buffer, rec2buffer, 'g-', label='recovered')
+line6, = ax2.plot(date2buffer, rec2buffer, 'g-', label='recovered')
 
 ax2.grid(True)
 
 # #Setup legends
 # #
-ax2.legend([line4, line5], [line4.get_label(), line5.get_label()])
+ax2.legend([line4, line5, line6], [line4.get_label(), line5.get_label(),
+    line6.get_label()])
 
 # format the ticks
 ax2.xaxis.set_major_locator(months)
@@ -367,8 +374,8 @@ ax4.set_xlim(dates_b[0], dates_b[len(dates_b)-1] + np.timedelta64(2,'D') )
 ax3.set_ylim(0, y_lim_ga+int(y_lim_ga * 0.33))
 ax4.set_ylim(0, y_lim_gb+int(y_lim_gb * 0.33))
 
-line7, = ax3.plot(datebuffer, growth_a, 'g-', label="Growth")
-line8, = ax4.plot(date2buffer, growth_b, 'r-', label="Growth")
+line7, = ax3.plot(datebuffer, growth_a, 'g-', label="Growth Rate")
+line8, = ax4.plot(date2buffer, growth_b, 'r-', label="Growth Rate")
 
 ax3.grid(False)
 ax4.grid(False)
@@ -407,14 +414,14 @@ def init():
     print("Init called!!")
     line.set_data(datebuffer, intbuffer)
     line2.set_data(datebuffer, dthbuffer)
-    # line3.set_data(datebuffer, recbuffer)
+    line3.set_data(datebuffer, recbuffer)
     line4.set_data(date2buffer, int2buffer)
     line5.set_data(date2buffer, dth2buffer)
-    # line6.set_data(date2buffer, rec2buffer)
+    line6.set_data(date2buffer, rec2buffer)
     line7.set_data(datebuffer, growth_a)
     line8.set_data(date2buffer, growth_b)
-    return line, line2, line4, line5, line7, line8
-    # return line, line2, line3, line4, line5, line6, line7, line8
+    # return line, line2, line4, line5, line6, line7, line8
+    return line, line2, line3, line4, line5, line6, line7, line8
 
 comparator = num_cases > num_cases_b
 
@@ -429,21 +436,21 @@ def anim(i):
             date2buffer.append(dates_b[i])
             int2buffer.append(cumulconf_b[i])
             dth2buffer.append(cumuldth_b[i])
-            # rec2buffer.append(cumulrec_b[i])
+            rec2buffer.append(cumulrec_b[i])
             growth_b.append(growth_b_vals[i])
             line4.set_data(date2buffer, int2buffer)
             line5.set_data(date2buffer, dth2buffer)
-            # line6.set_data(date2buffer, rec2buffer)
+            line6.set_data(date2buffer, rec2buffer)
             line8.set_data(date2buffer, growth_b)
         if len(datebuffer) < i+1:
             datebuffer.append(dates[i])
             intbuffer.append(cumulative_conf[i])
             dthbuffer.append(cumulative_dth[i])
-            # recbuffer.append(cumulative_rec[i])
+            recbuffer.append(cumulative_rec[i])
             growth_a.append(growth_a_vals[i])
             line.set_data(datebuffer, intbuffer)
             line2.set_data(datebuffer, dthbuffer)
-            # line3.set_data(datebuffer, recbuffer)
+            line3.set_data(datebuffer, recbuffer)
             line7.set_data(datebuffer, growth_a)
         else:
             print("What")
@@ -465,35 +472,35 @@ def anim(i):
             date2buffer.append(dates_b[i])
             int2buffer.append(cumulconf_b[i])
             dth2buffer.append(cumuldth_b[i])
-            # rec2buffer.append(cumulrec_b[i])
+            rec2buffer.append(cumulrec_b[i])
             growth_b.append(growth_b_vals[i])
             line4.set_data(date2buffer, int2buffer)
             line5.set_data(date2buffer, dth2buffer)
-            # line6.set_data(date2buffer, rec2buffer)
+            line6.set_data(date2buffer, rec2buffer)
             line8.set_data(date2buffer, growth_b)
     else:
         # print("Theyre the same!!")
         datebuffer.append(dates[i])
         intbuffer.append(cumulative_conf[i])
         dthbuffer.append(cumulative_dth[i])
-        # recbuffer.append(cumulative_rec[i])
+        recbuffer.append(cumulative_rec[i])
         date2buffer.append(dates_b[i])
         int2buffer.append(cumulconf_b[i])
         dth2buffer.append(cumuldth_b[i])
-        # rec2buffer.append(cumulrec_b[i])
+        rec2buffer.append(cumulrec_b[i])
         growth_a.append(growth_a_vals[i])
         growth_b.append(growth_b_vals[i])
         line4.set_data(date2buffer, int2buffer)
         line5.set_data(date2buffer, dth2buffer)
-        # line6.set_data(date2buffer, rec2buffer)
+        line6.set_data(date2buffer, rec2buffer)
         line8.set_data(date2buffer, growth_b)
         line.set_data(datebuffer, intbuffer)
         line2.set_data(datebuffer, dthbuffer)
-        # line3.set_data(datebuffer, recbuffer)
+        line3.set_data(datebuffer, recbuffer)
         line7.set_data(datebuffer, growth_a)
 
-    return line, line2, line4, line5, line7, line8
-    # return line, line2, line3, line4, line5, line6, line7, line8
+    # return line, line2, line4, line5, line7, line8
+    return line, line2, line3, line4, line5, line6, line7, line8
 
 STAGE("ANIMATE", "animation starts!")
 
@@ -503,6 +510,7 @@ STAGE("ANIMATE", "animation starts!")
 # animation = FuncAnimation(fig, anim, frames=range(num_cases), interval=1, blit=True, repeat=False)
 anim = FuncAnimation(fig, anim,  init_func=init, frames=max_cases, interval=24, blit=True, repeat=False)
 # anim.save('Sars-Cov-2 (' + region  ') vs (' + region2 + ').mp4', writer=writer)
-# plt.yscale("log")
+if should_logscale:
+    plt.yscale("symlog")
 # plt.ioff()
 plt.show()
